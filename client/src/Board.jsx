@@ -199,26 +199,7 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
           </g>
         ))}
 
-        {/* 강 영역 중앙 연결선 */}
-        <line
-          x1={toX(0)}
-          y1={toY(4) + cellSize * 0.5}
-          x2={toX(COLS - 1)}
-          y2={toY(4) + cellSize * 0.5}
-          stroke="#8b6914"
-          strokeWidth={0.9}
-          strokeDasharray={`${cellSize * 0.45} ${cellSize * 0.2}`}
-          opacity={0.85}
-        />
-        <line
-          x1={toX(0)}
-          y1={toY(4) + cellSize * 0.62}
-          x2={toX(COLS - 1)}
-          y2={toY(4) + cellSize * 0.62}
-          stroke="#8b6914"
-          strokeWidth={0.55}
-          opacity={0.45}
-        />
+        {/* 강(중앙)은 글자/장식 없이 비움 */}
 
         {/* 궁 대각선 - 한(상단) */}
         <line x1={toX(3)} y1={toY(0)} x2={toX(5)} y2={toY(2)} stroke="#8b6914" strokeWidth={0.8} />
