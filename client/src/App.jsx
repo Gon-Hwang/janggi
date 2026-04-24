@@ -25,6 +25,8 @@ export default function App() {
   const [toastKey, setToastKey] = useState(0);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [joinInput, setJoinInput] = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -100,6 +102,31 @@ export default function App() {
     };
   }, [myTeam, showToast]);
 
+  useEffect(() => {
+    function handleBeforeInstallPrompt(event) {
+      event.preventDefault();
+      setDeferredPrompt(event);
+    }
+
+    function handleInstalled() {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+      showToast('앱이 설치되었습니다.');
+    }
+
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+    if (standalone) setIsInstalled(true);
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
+  }, [showToast]);
+
   function startMode(m) {
     setMode(m);
     if (m === 'pvp') {
@@ -149,6 +176,16 @@ export default function App() {
     setGameOver(null);
     setSelectedCell(null);
     setValidMoves([]);
+  }
+
+  async function handleInstallApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice?.outcome !== 'accepted') {
+      showToast('설치를 취소했습니다.');
+    }
+    setDeferredPrompt(null);
   }
 
   const canMove = myTeam !== 'spectator' && myTeam === currentTurn && !gameOver;
@@ -243,6 +280,9 @@ export default function App() {
             </span>
             {mode !== 'ava' && myTeam !== 'spectator' && (
               <button className="btn-danger" onClick={handleResign}>항복</button>
+            )}
+            {!isInstalled && deferredPrompt && (
+              <button className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
             )}
             <button className="btn-secondary" onClick={goHome}>나가기</button>
           </div>

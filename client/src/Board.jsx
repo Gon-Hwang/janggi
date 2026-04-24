@@ -29,10 +29,11 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const pad = cellSize * 0.3;
+  // 가장자리 기물이 잘리지 않도록 기물 반지름보다 넉넉한 여백 확보
+  const piece_r = cellSize * 0.42;
+  const pad = Math.max(cellSize * 0.52, piece_r + 4);
   const svgW = cellSize * (COLS - 1) + pad * 2;
   const svgH = cellSize * (ROWS - 1) + pad * 2;
-  const piece_r = cellSize * 0.42;
 
   function toX(c) { return pad + c * cellSize; }
   function toY(r) { return pad + r * cellSize; }
@@ -68,7 +69,7 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
   const isSelected = (r, c) => selectedCell && selectedCell[0] === r && selectedCell[1] === c;
 
   return (
-    <div ref={containerRef} className="board-container" style={{ width: '100%', maxWidth: 600 }}>
+    <div ref={containerRef} className="board-container" style={{ width: '100%', maxWidth: 680 }}>
       <svg
         className="board-svg"
         width={svgW}

@@ -69,24 +69,64 @@ function inBounds(row, col) {
   return row >= 0 && row < 10 && col >= 0 && col < 9;
 }
 
-// 궁 내 대각선 연결 경로
-const PALACE_DIAGONALS = {
-  han: {
-    '0,3': ['1,4'], '0,5': ['1,4'], '1,4': ['0,3','0,5','2,3','2,5'],
-    '2,3': ['1,4'], '2,5': ['1,4'], '0,4': ['1,3','1,5'], '2,4': ['1,3','1,5'],
-    '1,3': ['0,4','2,4'], '1,5': ['0,4','2,4'],
-  },
-  cho: {
-    '7,3': ['8,4'], '7,5': ['8,4'], '8,4': ['7,3','7,5','9,3','9,5'],
-    '9,3': ['8,4'], '9,5': ['8,4'], '7,4': ['8,3','8,5'], '9,4': ['8,3','8,5'],
-    '8,3': ['7,4','9,4'], '8,5': ['7,4','9,4'],
-  },
+// 궁 대각선(실제 그려진 선) 정보
+const PALACE_DIAGONAL_LINES = {
+  han: [
+    [[0, 3], [1, 4], [2, 5]],
+    [[0, 5], [1, 4], [2, 3]],
+  ],
+  cho: [
+    [[7, 3], [8, 4], [9, 5]],
+    [[7, 5], [8, 4], [9, 3]],
+  ],
 };
 
-function getPalaceDiagonalMoves(row, col, team) {
-  const key = `${row},${col}`;
-  const diags = PALACE_DIAGONALS[team][key] || [];
-  return diags.map(s => { const [r,c] = s.split(',').map(Number); return [r,c]; });
+function keyOf(row, col) {
+  return `${row},${col}`;
+}
+
+function getPalaceDiagonalNeighbors(row, col) {
+  const team = row <= 2 ? TEAMS.HAN : (row >= 7 ? TEAMS.CHO : null);
+  if (!team) return [];
+
+  const neighbors = new Set();
+  const here = keyOf(row, col);
+  for (const line of PALACE_DIAGONAL_LINES[team]) {
+    const idx = line.findIndex(([r, c]) => keyOf(r, c) === here);
+    if (idx === -1) continue;
+    if (idx > 0) neighbors.add(keyOf(line[idx - 1][0], line[idx - 1][1]));
+    if (idx < line.length - 1) neighbors.add(keyOf(line[idx + 1][0], line[idx + 1][1]));
+  }
+  return [...neighbors].map((s) => s.split(',').map(Number));
+}
+
+function getPalaceDiagonalRayMoves(board, row, col, team, canCaptureCannon = true) {
+  const enemy = team === TEAMS.CHO ? TEAMS.HAN : TEAMS.CHO;
+  const lines = PALACE_DIAGONAL_LINES[team];
+  const result = [];
+  const here = keyOf(row, col);
+
+  for (const line of lines) {
+    const idx = line.findIndex(([r, c]) => keyOf(r, c) === here);
+    if (idx === -1) continue;
+
+    for (const dir of [-1, 1]) {
+      let i = idx + dir;
+      while (i >= 0 && i < line.length) {
+        const [r, c] = line[i];
+        const target = board[r][c];
+        if (target) {
+          if (target.team === enemy && (canCaptureCannon || target.type !== PIECES.CANNON)) {
+            result.push([r, c]);
+          }
+          break;
+        }
+        result.push([r, c]);
+        i += dir;
+      }
+    }
+  }
+  return result;
 }
 
 // 각 기물의 이동 가능한 칸 반환
@@ -114,7 +154,7 @@ export function getValidMoves(board, row, col) {
         if (inPalace(nr, nc, team) && canMoveTo(nr, nc)) moves.push([nr, nc]);
       }
       // 궁 내 대각선
-      for (const [nr, nc] of getPalaceDiagonalMoves(row, col, team)) {
+      for (const [nr, nc] of getPalaceDiagonalNeighbors(row, col)) {
         if (canMoveTo(nr, nc)) moves.push([nr, nc]);
       }
       break;
@@ -134,14 +174,11 @@ export function getValidMoves(board, row, col) {
           nr += dr; nc += dc;
         }
       }
-      // 궁 내 대각선 이동
-      for (const [nr, nc] of getPalaceDiagonalMoves(row, col, team)) {
-        if (canMoveTo(nr, nc)) moves.push([nr, nc]);
-      }
-      // 적 궁에서도 대각선 이동 가능
-      const enemyTeam = enemy;
-      for (const [nr, nc] of getPalaceDiagonalMoves(row, col, enemyTeam)) {
-        if (canMoveTo(nr, nc)) moves.push([nr, nc]);
+      // 궁 내 대각선은 선을 따라 연속 이동 가능
+      for (const palaceTeam of [TEAMS.HAN, TEAMS.CHO]) {
+        for (const [nr, nc] of getPalaceDiagonalRayMoves(board, row, col, palaceTeam)) {
+          moves.push([nr, nc]);
+        }
       }
       break;
     }
@@ -171,6 +208,36 @@ export function getValidMoves(board, row, col) {
           nr += dr; nc += dc;
         }
       }
+      // 궁 내 대각선 이동(포 규칙: 정확히 하나를 넘어야 함, 포는 포를 잡을 수 없음)
+      for (const palaceTeam of [TEAMS.HAN, TEAMS.CHO]) {
+        const lines = PALACE_DIAGONAL_LINES[palaceTeam];
+        const here = keyOf(row, col);
+        for (const line of lines) {
+          const idx = line.findIndex(([r, c]) => keyOf(r, c) === here);
+          if (idx === -1) continue;
+          for (const dir of [-1, 1]) {
+            let i = idx + dir;
+            let jumped = false;
+            while (i >= 0 && i < line.length) {
+              const [r, c] = line[i];
+              const target = board[r][c];
+              if (!jumped) {
+                if (target) {
+                  if (target.type === PIECES.CANNON) break;
+                  jumped = true;
+                }
+              } else {
+                if (target) {
+                  if (target.team === enemy && target.type !== PIECES.CANNON) moves.push([r, c]);
+                  break;
+                }
+                moves.push([r, c]);
+              }
+              i += dir;
+            }
+          }
+        }
+      }
       break;
     }
 
@@ -193,20 +260,24 @@ export function getValidMoves(board, row, col) {
     }
 
     case PIECES.ELEPHANT: {
-      // 상: 직선 1칸 후 대각 2칸 (장애물 확인)
+      // 상: 직선 1칸 + 대각 2칸(총 3칸) / 중간 2점이 모두 비어야 함
       const elephantMoves = [
-        [-1, 0, [-1,-1],[-2,-1]], [-1, 0, [-1,1],[-2,1]],
-        [1, 0, [1,-1],[2,-1]], [1, 0, [1,1],[2,1]],
-        [0, -1, [-1,-1],[-1,-2]], [0, -1, [1,-1],[1,-2]],
-        [0, 1, [-1,1],[-1,2]], [0, 1, [1,1],[1,2]],
+        { blocks: [[-1, 0], [-2, -1]], dest: [-3, -2] },
+        { blocks: [[-1, 0], [-2, 1]], dest: [-3, 2] },
+        { blocks: [[1, 0], [2, -1]], dest: [3, -2] },
+        { blocks: [[1, 0], [2, 1]], dest: [3, 2] },
+        { blocks: [[0, -1], [-1, -2]], dest: [-2, -3] },
+        { blocks: [[0, -1], [1, -2]], dest: [2, -3] },
+        { blocks: [[0, 1], [-1, 2]], dest: [-2, 3] },
+        { blocks: [[0, 1], [1, 2]], dest: [2, 3] },
       ];
-      for (const [dr1, dc1, mid, end] of elephantMoves) {
-        const mr = row + dr1, mc = col + dc1;
-        const mr2 = row + dr1 + mid[0], mc2 = col + dc1 + mid[1];
-        const nr = row + dr1 + mid[0] + end[0], nc = col + dc1 + mid[1] + end[1];
+      for (const { blocks, dest } of elephantMoves) {
+        const [b1r, b1c] = [row + blocks[0][0], col + blocks[0][1]];
+        const [b2r, b2c] = [row + blocks[1][0], col + blocks[1][1]];
+        const [nr, nc] = [row + dest[0], col + dest[1]];
         if (
-          inBounds(mr, mc) && !board[mr][mc] &&
-          inBounds(mr2, mc2) && !board[mr2][mc2] &&
+          inBounds(b1r, b1c) && !board[b1r][b1c] &&
+          inBounds(b2r, b2c) && !board[b2r][b2c] &&
           inBounds(nr, nc) && canMoveTo(nr, nc)
         ) {
           moves.push([nr, nc]);
@@ -223,12 +294,9 @@ export function getValidMoves(board, row, col) {
         const nr = row + dr, nc = col + dc;
         if (inBounds(nr, nc) && canMoveTo(nr, nc)) moves.push([nr, nc]);
       }
-      // 궁 내 대각선
-      for (const [nr, nc] of getPalaceDiagonalMoves(row, col, team)) {
-        if (canMoveTo(nr, nc)) moves.push([nr, nc]);
-      }
-      for (const [nr, nc] of getPalaceDiagonalMoves(row, col, enemy)) {
-        if (canMoveTo(nr, nc)) moves.push([nr, nc]);
+      // 궁 안에서는 전진 대각선도 허용(후진 대각선은 불가)
+      for (const [nr, nc] of getPalaceDiagonalNeighbors(row, col)) {
+        if (nr - row === forward && canMoveTo(nr, nc)) moves.push([nr, nc]);
       }
       break;
     }
