@@ -307,3 +307,24 @@ export function isGameOver(board) {
   if (!hanKing) return TEAMS.CHO;
   return null;
 }
+
+export function getAllMoves(board, team) {
+  const moves = [];
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 9; c++) {
+      const piece = board[r][c];
+      if (!piece || piece.team !== team) continue;
+      const valids = getValidMoves(board, r, c);
+      for (const [tr, tc] of valids) {
+        moves.push({ from: [r, c], to: [tr, tc] });
+      }
+    }
+  }
+  return moves;
+}
+
+export function getAIMove(board, team) {
+  const moves = getAllMoves(board, team);
+  if (moves.length === 0) return null;
+  return moves[Math.floor(Math.random() * moves.length)];
+}

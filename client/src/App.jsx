@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Board from './Board';
 import { socket } from './socket';
-import { applyMove, createInitialBoard, getValidMoves, isGameOver } from './janggiRules';
+import { applyMove, createInitialBoard, getAIMove, getValidMoves, isGameOver } from './janggiRules';
 
 const TEAM_LABEL = { cho: '초(楚)', han: '한(漢)' };
 const MODE_LABEL = { pvp: '대인 대국', pva: 'AI 대국', ava: 'AI vs AI', practice: '연습 모드' };
@@ -166,7 +166,7 @@ export default function App() {
   function startMode(m) {
     setMode(m);
     if (m === 'practice') {
-      setMyTeam('spectator');
+      setMyTeam('cho');
       setBoard(createInitialBoard());
       setCurrentTurn('cho');
       setSelectedCell(null);
@@ -203,11 +203,12 @@ export default function App() {
   function handleMove(from, to) {
     if (mode === 'practice') {
       if (!board || gameOver) return;
+      if (currentTurn !== myTeam) return;
       const valids = getValidMoves(board, from[0], from[1]);
       const ok = valids.some(([r, c]) => r === to[0] && c === to[1]);
       if (!ok) return;
 
-      setHistory((prev) => [...prev, board.map((row) => [...row])]);
+      setHistory((prev) => [...prev, { board: board.map((row) => [...row]), turn: currentTurn }]);
       const movedBoard = applyMove(board, from, to);
       playMoveSound();
       setBoard(movedBoard);
@@ -224,6 +225,10 @@ export default function App() {
   function handleGetMoves(r, c) {
     if (mode === 'practice') {
       if (!board || gameOver) return;
+      if (currentTurn !== myTeam) {
+        setValidMoves([]);
+        return;
+      }
       const piece = board[r][c];
       if (!piece || piece.team !== currentTurn) {
         setValidMoves([]);
@@ -256,10 +261,10 @@ export default function App() {
 
   function handleUndoPractice() {
     if (mode !== 'practice' || history.length === 0) return;
-    const prevBoard = history[history.length - 1];
+    const prevState = history[history.length - 1];
     setHistory((prev) => prev.slice(0, -1));
-    setBoard(prevBoard);
-    setCurrentTurn((prev) => (prev === 'cho' ? 'han' : 'cho'));
+    setBoard(prevState.board);
+    setCurrentTurn(prevState.turn);
     setGameOver(null);
     setSelectedCell(null);
     setValidMoves([]);
@@ -284,7 +289,26 @@ export default function App() {
     setDeferredPrompt(null);
   }
 
-  const canMove = mode === 'practice' || (myTeam !== 'spectator' && myTeam === currentTurn && !gameOver);
+  const canMove = (mode === 'practice' && currentTurn === myTeam) || (myTeam !== 'spectator' && myTeam === currentTurn && !gameOver);
+
+  useEffect(() => {
+    if (mode !== 'practice' || !board || gameOver) return;
+    if (currentTurn === myTeam) return;
+
+    const timer = setTimeout(() => {
+      const aiMove = getAIMove(board, currentTurn);
+      if (!aiMove) return;
+      setHistory((prev) => [...prev, { board: board.map((row) => [...row]), turn: currentTurn }]);
+      const movedBoard = applyMove(board, aiMove.from, aiMove.to);
+      playMoveSound();
+      setBoard(movedBoard);
+      setCurrentTurn((prev) => (prev === 'cho' ? 'han' : 'cho'));
+      const winner = isGameOver(movedBoard);
+      if (winner) setGameOver({ winner });
+    }, 650);
+
+    return () => clearTimeout(timer);
+  }, [mode, board, currentTurn, myTeam, gameOver, playMoveSound]);
 
   if (screen === 'home') {
     return (
@@ -314,7 +338,7 @@ export default function App() {
             <div className="mode-card" onClick={() => startMode('practice')}>
               <span className="icon">🧪</span>
               <h2>연습 모드</h2>
-              <p>양측을 직접 두고 무제한 되돌리기</p>
+              <p>AI와 대국 + 무제한 되돌리기</p>
             </div>
           </div>
         </div>
@@ -399,7 +423,7 @@ export default function App() {
             <div className="player-badge han">漢</div>
             <div>
               <div className="player-name">
-                {mode === 'practice' ? '한(漢) - 연습' : mode === 'ava' ? 'AI (한)' : mode === 'pva' ? 'AI' : '한(漢)'}
+                {mode === 'practice' ? 'AI (한)' : mode === 'ava' ? 'AI (한)' : mode === 'pva' ? 'AI' : '한(漢)'}
               </div>
               <div className="player-label">한(漢) — 파란색</div>
             </div>
@@ -430,7 +454,7 @@ export default function App() {
             <div className="player-badge cho">楚</div>
             <div>
               <div className="player-name">
-                {mode === 'practice' ? '초(楚) - 연습' : mode === 'ava' ? 'AI (초)' : mode === 'pva' ? '나 (초)' : '초(楚)'}
+                {mode === 'practice' ? '나 (초)' : mode === 'ava' ? 'AI (초)' : mode === 'pva' ? '나 (초)' : '초(楚)'}
               </div>
               <div className="player-label">초(楚) — 빨간색</div>
             </div>
