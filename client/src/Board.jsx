@@ -15,7 +15,10 @@ const ROWS = 10;
 
 export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, validMoves, selectedCell, onSelect }) {
   const containerRef = useRef(null);
+  const prevBoardRef = useRef(board);
   const [cellSize, setCellSize] = useState(52);
+  const [animMove, setAnimMove] = useState(null);
+  const [animProgress, setAnimProgress] = useState(1);
 
   useEffect(() => {
     function update() {
@@ -29,6 +32,65 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  useEffect(() => {
+    const prev = prevBoardRef.current;
+    if (!prev || prev === board) {
+      prevBoardRef.current = board;
+      return;
+    }
+
+    const prevPos = new Map();
+    const currPos = new Map();
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const p1 = prev[r]?.[c];
+        const p2 = board[r]?.[c];
+        if (p1) prevPos.set(p1.id, { r, c, piece: p1 });
+        if (p2) currPos.set(p2.id, { r, c, piece: p2 });
+      }
+    }
+
+    let moved = null;
+    for (const [id, oldInfo] of prevPos.entries()) {
+      const newInfo = currPos.get(id);
+      if (!newInfo) continue;
+      if (oldInfo.r !== newInfo.r || oldInfo.c !== newInfo.c) {
+        moved = { id, from: [oldInfo.r, oldInfo.c], to: [newInfo.r, newInfo.c], piece: newInfo.piece };
+        break;
+      }
+    }
+
+    if (moved) {
+      setAnimMove(moved);
+      setAnimProgress(0);
+    }
+
+    prevBoardRef.current = board;
+  }, [board]);
+
+  useEffect(() => {
+    if (!animMove) return;
+    let rafId = 0;
+    const started = performance.now();
+    const duration = 360;
+
+    const tick = (now) => {
+      const p = Math.min(1, (now - started) / duration);
+      // 초반 가속, 후반 감속
+      const eased = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
+      setAnimProgress(eased);
+      if (p < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        setAnimMove(null);
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [animMove]);
+
   // 가장자리 기물이 잘리지 않도록 기물 반지름보다 넉넉한 여백 확보
   const piece_r = cellSize * 0.42;
   const pad = Math.max(cellSize * 0.52, piece_r + 4);
@@ -37,6 +99,47 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
 
   function toX(c) { return pad + c * cellSize; }
   function toY(r) { return pad + r * cellSize; }
+
+  function renderPiece(piece, r, c, key) {
+    const x = toX(c);
+    const y = toY(r);
+    const isCho = piece.team === 'cho';
+    const bg = isCho ? '#e63946' : '#457b9d';
+    const sel = isSelected(r, c);
+    const name = PIECE_NAMES[piece.type]?.[piece.team] || '?';
+
+    return (
+      <g
+        key={key}
+        onClick={() => handleCellClick(r, c)}
+        style={{ cursor: 'pointer' }}
+      >
+        {sel && (
+          <circle cx={x} cy={y} r={piece_r + 4}
+            fill="none" stroke="#e94560" strokeWidth={2.5}
+            opacity={0.8}
+          />
+        )}
+        <circle cx={x} cy={y} r={piece_r}
+          fill={bg}
+          stroke={sel ? '#fff' : (isCho ? '#c0242f' : '#2d5a7a')}
+          strokeWidth={sel ? 2 : 1.5}
+          filter={sel ? 'drop-shadow(0 0 6px rgba(233,69,96,0.8))' : 'drop-shadow(1px 2px 3px rgba(0,0,0,0.4))'}
+        />
+        <text
+          x={x} y={y + cellSize * 0.14}
+          textAnchor="middle"
+          fontSize={cellSize * 0.38}
+          fontFamily="'Noto Serif KR', 'Noto Serif', serif"
+          fontWeight="bold"
+          fill="white"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          {name}
+        </text>
+      </g>
+    );
+  }
 
   function handleCellClick(r, c) {
     const piece = board[r][c];
@@ -96,23 +199,26 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
           </g>
         ))}
 
-        {/* 강(楚河 漢界) 영역 */}
-        <text x={svgW / 2 - cellSize * 1.5} y={toY(4) + cellSize * 0.5 + 5}
-          fill="#8b6914" fontSize={cellSize * 0.32} fontFamily="serif" textAnchor="middle" fontWeight="bold">
-          楚
-        </text>
-        <text x={svgW / 2 - cellSize * 0.4} y={toY(4) + cellSize * 0.5 + 5}
-          fill="#8b6914" fontSize={cellSize * 0.32} fontFamily="serif" textAnchor="middle" fontWeight="bold">
-          河
-        </text>
-        <text x={svgW / 2 + cellSize * 0.4} y={toY(4) + cellSize * 0.5 + 5}
-          fill="#8b6914" fontSize={cellSize * 0.32} fontFamily="serif" textAnchor="middle" fontWeight="bold">
-          漢
-        </text>
-        <text x={svgW / 2 + cellSize * 1.5} y={toY(4) + cellSize * 0.5 + 5}
-          fill="#8b6914" fontSize={cellSize * 0.32} fontFamily="serif" textAnchor="middle" fontWeight="bold">
-          界
-        </text>
+        {/* 강 영역 중앙 연결선 */}
+        <line
+          x1={toX(0)}
+          y1={toY(4) + cellSize * 0.5}
+          x2={toX(COLS - 1)}
+          y2={toY(4) + cellSize * 0.5}
+          stroke="#8b6914"
+          strokeWidth={0.9}
+          strokeDasharray={`${cellSize * 0.45} ${cellSize * 0.2}`}
+          opacity={0.85}
+        />
+        <line
+          x1={toX(0)}
+          y1={toY(4) + cellSize * 0.62}
+          x2={toX(COLS - 1)}
+          y2={toY(4) + cellSize * 0.62}
+          stroke="#8b6914"
+          strokeWidth={0.55}
+          opacity={0.45}
+        />
 
         {/* 궁 대각선 - 한(상단) */}
         <line x1={toX(3)} y1={toY(0)} x2={toX(5)} y2={toY(2)} stroke="#8b6914" strokeWidth={0.8} />
@@ -159,45 +265,22 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
         {board.map((rowArr, r) =>
           rowArr.map((piece, c) => {
             if (!piece) return null;
-            const x = toX(c);
-            const y = toY(r);
-            const isCho = piece.team === 'cho';
-            const bg = isCho ? '#e63946' : '#457b9d';
-            const sel = isSelected(r, c);
-            const name = PIECE_NAMES[piece.type]?.[piece.team] || '?';
-
-            return (
-              <g
-                key={piece.id}
-                onClick={() => handleCellClick(r, c)}
-                style={{ cursor: 'pointer' }}
-              >
-                {sel && (
-                  <circle cx={x} cy={y} r={piece_r + 4}
-                    fill="none" stroke="#e94560" strokeWidth={2.5}
-                    opacity={0.8}
-                  />
-                )}
-                <circle cx={x} cy={y} r={piece_r}
-                  fill={bg}
-                  stroke={sel ? '#fff' : (isCho ? '#c0242f' : '#2d5a7a')}
-                  strokeWidth={sel ? 2 : 1.5}
-                  filter={sel ? 'drop-shadow(0 0 6px rgba(233,69,96,0.8))' : 'drop-shadow(1px 2px 3px rgba(0,0,0,0.4))'}
-                />
-                <text
-                  x={x} y={y + cellSize * 0.14}
-                  textAnchor="middle"
-                  fontSize={cellSize * 0.38}
-                  fontFamily="'Noto Serif KR', 'Noto Serif', serif"
-                  fontWeight="bold"
-                  fill="white"
-                  style={{ pointerEvents: 'none', userSelect: 'none' }}
-                >
-                  {name}
-                </text>
-              </g>
-            );
+            if (animMove && piece.id === animMove.id && r === animMove.to[0] && c === animMove.to[1]) {
+              return null;
+            }
+            return renderPiece(piece, r, c, piece.id);
           })
+        )}
+
+        {animMove && (
+          <g style={{ pointerEvents: 'none' }}>
+            {renderPiece(
+              animMove.piece,
+              animMove.from[0] + (animMove.to[0] - animMove.from[0]) * animProgress,
+              animMove.from[1] + (animMove.to[1] - animMove.from[1]) * animProgress,
+              `anim-${animMove.id}`
+            )}
+          </g>
         )}
       </svg>
     </div>
