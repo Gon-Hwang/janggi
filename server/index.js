@@ -2,11 +2,31 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import { readFileSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createInitialBoard, getValidMoves, applyMove, isGameOver, getAIMoveByDifficulty } from './janggi.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let appVersion = '1.0.0';
+try {
+  appVersion = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version;
+} catch {
+  // ignore
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.get('/api/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    version: appVersion,
+    commit: process.env.RENDER_GIT_COMMIT || null,
+  });
+});
+
 app.use(express.static('public'));
 
 const httpServer = createServer(app);

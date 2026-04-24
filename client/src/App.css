@@ -88,6 +88,17 @@
   border-color: transparent;
 }
 
+.home-update-row {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.home-update-row button {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
 .mode-card {
   background: var(--card);
   border: 1px solid #2a4a7f;

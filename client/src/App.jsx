@@ -45,11 +45,34 @@ export default function App() {
     normalizeDifficulty(typeof localStorage !== 'undefined' ? localStorage.getItem(AI_STORAGE_KEY) : 'medium')
   );
 
-  const showToast = useCallback((msg) => {
+  const showToast = useCallback((msg, durationMs = 3000) => {
     setToast(msg);
     setToastKey(k => k + 1);
-    setTimeout(() => setToast(''), 3000);
+    setTimeout(() => setToast(''), durationMs);
   }, []);
+
+  const handleCheckUpdate = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/version?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('bad');
+      const data = await res.json();
+      const serverCommit = data.commit || '';
+      const clientCommit = __APP_BUILD_COMMIT__ || '';
+      const serverVersion = data.version || __APP_VERSION__ || '';
+
+      if (clientCommit && serverCommit && clientCommit !== serverCommit) {
+        showToast('새 버전이 배포되었습니다. 새로고침(F5) 해 주세요.', 5000);
+        return;
+      }
+      if (!clientCommit && !serverCommit) {
+        showToast(`연결됨 · v${serverVersion} (커밋 비교 불가)`, 4000);
+        return;
+      }
+      showToast(`최신 상태입니다 · v${serverVersion}`, 3500);
+    } catch {
+      showToast('업데이트 확인에 실패했습니다.');
+    }
+  }, [showToast]);
 
   const playMoveSound = useCallback(() => {
     try {
@@ -400,6 +423,12 @@ export default function App() {
             <p className="home-difficulty-title">AI 난이도 (하 · 중 · 상)</p>
             {renderDifficultyControls()}
           </div>
+
+          <div className="home-update-row">
+            <button type="button" className="btn-secondary" onClick={handleCheckUpdate}>
+              업데이트 확인
+            </button>
+          </div>
         </div>
 
         {joinModalOpen && (
@@ -446,6 +475,7 @@ export default function App() {
             </>
           )}
           <p>상대방이 접속하면 자동으로 시작됩니다</p>
+          <button type="button" className="btn-secondary" onClick={handleCheckUpdate}>업데이트 확인</button>
           <button className="btn-secondary" onClick={goHome}>돌아가기</button>
         </div>
         {toast && <Toast key={toastKey} msg={toast} />}
@@ -474,6 +504,7 @@ export default function App() {
             {!isInstalled && deferredPrompt && (
               <button className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
             )}
+            <button type="button" className="btn-secondary" onClick={handleCheckUpdate}>업데이트 확인</button>
             <button className="btn-secondary" onClick={goHome}>나가기</button>
           </div>
         </div>
