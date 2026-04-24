@@ -3,7 +3,7 @@ services:
     name: janggi
     runtime: node
     rootDir: .
-    buildCommand: npm run build
+    buildCommand: npm run build && cd server && npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
