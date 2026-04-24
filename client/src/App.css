@@ -88,10 +88,24 @@
   border-color: transparent;
 }
 
+.home-install-row {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.home-install-row button {
+  font-size: 0.95rem;
+  padding: 0.55rem 1.2rem;
+}
+
 .home-update-row {
   margin-top: 0.5rem;
   display: flex;
   justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .home-update-row button {

@@ -339,13 +339,16 @@ export default function App() {
   }
 
   async function handleInstallApp() {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const choice = await deferredPrompt.userChoice;
-    if (choice?.outcome !== 'accepted') {
-      showToast('설치를 취소했습니다.');
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice?.outcome !== 'accepted') {
+        showToast('설치를 취소했습니다.');
+      }
+      setDeferredPrompt(null);
+      return;
     }
-    setDeferredPrompt(null);
+    showToast('브라우저 ⋮ 메뉴에서 「앱 설치」 또는 「홈 화면에 추가」를 눌러 주세요.', 5000);
   }
 
   function renderDifficultyControls() {
@@ -395,6 +398,14 @@ export default function App() {
             <h1>한국 장기</h1>
             <p className="subtitle">온라인 장기 대국 — 어디서든 즐기세요</p>
           </div>
+
+          {!isInstalled && (
+            <div className="home-install-row">
+              <button type="button" className="btn-primary" onClick={handleInstallApp}>
+                앱 설치 (홈 화면에 추가)
+              </button>
+            </div>
+          )}
 
           <div className="home-cards">
             <div className="mode-card" onClick={() => startMode('pvp')}>
@@ -475,6 +486,9 @@ export default function App() {
             </>
           )}
           <p>상대방이 접속하면 자동으로 시작됩니다</p>
+          {!isInstalled && (
+            <button type="button" className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
+          )}
           <button type="button" className="btn-secondary" onClick={handleCheckUpdate}>업데이트 확인</button>
           <button className="btn-secondary" onClick={goHome}>돌아가기</button>
         </div>
@@ -501,8 +515,8 @@ export default function App() {
                 되돌리기
               </button>
             )}
-            {!isInstalled && deferredPrompt && (
-              <button className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
+            {!isInstalled && (
+              <button type="button" className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
             )}
             <button type="button" className="btn-secondary" onClick={handleCheckUpdate}>업데이트 확인</button>
             <button className="btn-secondary" onClick={goHome}>나가기</button>
