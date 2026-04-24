@@ -323,8 +323,80 @@ export function getAllMoves(board, team) {
   return moves;
 }
 
-export function getAIMove(board, team) {
-  const moves = getAllMoves(board, team);
-  if (moves.length === 0) return null;
-  return moves[Math.floor(Math.random() * moves.length)];
+const PIECE_VALUES = {
+  [PIECES.KING]: 10000,
+  [PIECES.CHARIOT]: 130,
+  [PIECES.CANNON]: 100,
+  [PIECES.HORSE]: 80,
+  [PIECES.ELEPHANT]: 40,
+  [PIECES.GUARD]: 40,
+  [PIECES.SOLDIER]: 30,
+};
+
+export function evaluateBoard(board, team) {
+  let score = 0;
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 9; c++) {
+      const p = board[r][c];
+      if (!p) continue;
+      const val = PIECE_VALUES[p.type] || 0;
+      score += p.team === team ? val : -val;
+    }
+  }
+  return score;
+}
+
+export function minimax(board, depth, alpha, beta, maximizing, team) {
+  const enemy = team === TEAMS.CHO ? TEAMS.HAN : TEAMS.CHO;
+  const currentTeam = maximizing ? team : enemy;
+
+  if (depth === 0) return { score: evaluateBoard(board, team) };
+
+  const moves = getAllMoves(board, currentTeam);
+  if (moves.length === 0) return { score: maximizing ? -9999 : 9999 };
+
+  let bestMove = null;
+
+  if (maximizing) {
+    let maxScore = -Infinity;
+    for (const move of moves) {
+      const newBoard = applyMove(board, move.from, move.to);
+      const result = minimax(newBoard, depth - 1, alpha, beta, false, team);
+      if (result.score > maxScore) {
+        maxScore = result.score;
+        bestMove = move;
+      }
+      alpha = Math.max(alpha, maxScore);
+      if (beta <= alpha) break;
+    }
+    return { score: maxScore, move: bestMove };
+  }
+  let minScore = Infinity;
+  for (const move of moves) {
+    const newBoard = applyMove(board, move.from, move.to);
+    const result = minimax(newBoard, depth - 1, alpha, beta, true, team);
+    if (result.score < minScore) {
+      minScore = result.score;
+      bestMove = move;
+    }
+    beta = Math.min(beta, minScore);
+    if (beta <= alpha) break;
+  }
+  return { score: minScore, move: bestMove };
+}
+
+export function getAIMove(board, team, depth = 3) {
+  const result = minimax(board, depth, -Infinity, Infinity, true, team);
+  return result.move;
+}
+
+/** @param {'easy' | 'medium' | 'hard'} difficulty */
+export function getAIMoveByDifficulty(board, team, difficulty) {
+  if (difficulty === 'easy') {
+    const moves = getAllMoves(board, team);
+    if (moves.length === 0) return null;
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+  const depth = difficulty === 'hard' ? 4 : 2;
+  return getAIMove(board, team, depth);
 }

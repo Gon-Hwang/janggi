@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { createInitialBoard, getValidMoves, applyMove, isGameOver, getAIMove, getAllMoves } from './janggi.js';
+import { createInitialBoard, getValidMoves, applyMove, isGameOver, getAIMoveByDifficulty } from './janggi.js';
 
 const app = express();
 app.use(cors());
@@ -18,7 +18,11 @@ const io = new Server(httpServer, {
 const rooms = {};
 let waitingPlayer = null;
 
-function createRoom(id, mode) {
+function normalizeDifficulty(d) {
+  return ['easy', 'medium', 'hard'].includes(d) ? d : 'medium';
+}
+
+function createRoom(id, mode, aiDifficulty = 'medium') {
   return {
     id,
     mode, // 'pvp' | 'pva' | 'ava'
@@ -28,6 +32,7 @@ function createRoom(id, mode) {
     status: 'waiting', // waiting | playing | finished
     winner: null,
     aiDelay: 1000,
+    aiDifficulty: normalizeDifficulty(aiDifficulty),
   };
 }
 
@@ -43,20 +48,32 @@ io.on('connection', (socket) => {
   });
 
   // 방 만들기
-  socket.on('createRoom', ({ mode }) => {
+  socket.on('createRoom', ({ mode, aiDifficulty }) => {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const room = createRoom(roomId, mode);
+    const room = createRoom(roomId, mode, aiDifficulty);
     rooms[roomId] = room;
 
     if (mode === 'pva') {
       room.players.cho = socket.id;
       room.status = 'playing';
       socket.join(roomId);
-      socket.emit('gameStart', { roomId, team: 'cho', board: room.board, currentTurn: room.currentTurn });
+      socket.emit('gameStart', {
+        roomId,
+        team: 'cho',
+        board: room.board,
+        currentTurn: room.currentTurn,
+        aiDifficulty: room.aiDifficulty,
+      });
     } else if (mode === 'ava') {
       room.status = 'playing';
       socket.join(roomId);
-      socket.emit('gameStart', { roomId, team: 'spectator', board: room.board, currentTurn: room.currentTurn });
+      socket.emit('gameStart', {
+        roomId,
+        team: 'spectator',
+        board: room.board,
+        currentTurn: room.currentTurn,
+        aiDifficulty: room.aiDifficulty,
+      });
       // AI 대 AI 시작
       setTimeout(() => runAITurn(roomId), 500);
     } else {
@@ -145,6 +162,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('setAIDifficulty', ({ aiDifficulty }) => {
+    const roomId = socket.data.roomId;
+    const room = rooms[roomId];
+    if (!room || (room.mode !== 'pva' && room.mode !== 'ava')) return;
+    room.aiDifficulty = normalizeDifficulty(aiDifficulty);
+    io.to(roomId).emit('aiDifficultyUpdate', { aiDifficulty: room.aiDifficulty });
+  });
+
   // 유효 이동 요청
   socket.on('getValidMoves', ({ row, col }) => {
     const roomId = socket.data.roomId;
@@ -199,7 +224,7 @@ function runAITurn(roomId) {
   if (!room || room.status !== 'playing') return;
 
   const team = room.currentTurn;
-  const move = getAIMove(room.board, team, 2);
+  const move = getAIMoveByDifficulty(room.board, team, room.aiDifficulty);
   if (!move) return;
 
   room.board = applyMove(room.board, move.from, move.to);

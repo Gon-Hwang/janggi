@@ -400,6 +400,17 @@ export function getAIMove(board, team, depth = 3) {
   return result.move;
 }
 
+/** @param {'easy' | 'medium' | 'hard'} difficulty */
+export function getAIMoveByDifficulty(board, team, difficulty) {
+  if (difficulty === 'easy') {
+    const moves = getAllMoves(board, team);
+    if (moves.length === 0) return null;
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+  const depth = difficulty === 'hard' ? 4 : 2;
+  return getAIMove(board, team, depth);
+}
+
 // 왕이 존재하는지 확인
 export function findKing(board, team) {
   for (let r = 0; r < 10; r++) {

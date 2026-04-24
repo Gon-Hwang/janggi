@@ -2,10 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Board from './Board';
 import { socket } from './socket';
-import { applyMove, createInitialBoard, getAIMove, getValidMoves, isGameOver } from './janggiRules';
+import { applyMove, createInitialBoard, getAIMoveByDifficulty, getValidMoves, isGameOver } from './janggiRules';
 
 const TEAM_LABEL = { cho: '초(楚)', han: '한(漢)' };
 const MODE_LABEL = { pvp: '대인 대국', pva: 'AI 대국', ava: 'AI vs AI', practice: '연습 모드' };
+
+const AI_STORAGE_KEY = 'janggi-ai-difficulty';
+const AI_LEVELS = [
+  { id: 'easy', label: '하' },
+  { id: 'medium', label: '중' },
+  { id: 'hard', label: '상' },
+];
+
+function normalizeDifficulty(d) {
+  return ['easy', 'medium', 'hard'].includes(d) ? d : 'medium';
+}
 
 function Toast({ msg }) {
   if (!msg) return null;
@@ -30,6 +41,9 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [history, setHistory] = useState([]);
+  const [aiDifficulty, setAiDifficulty] = useState(() =>
+    normalizeDifficulty(typeof localStorage !== 'undefined' ? localStorage.getItem(AI_STORAGE_KEY) : 'medium')
+  );
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -70,13 +84,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(AI_STORAGE_KEY, aiDifficulty);
+    } catch {
+      // ignore
+    }
+  }, [aiDifficulty]);
+
+  useEffect(() => {
     socket.connect();
 
-    socket.on('gameStart', ({ roomId: rid, team, board: b, currentTurn: ct }) => {
+    socket.on('gameStart', ({ roomId: rid, team, board: b, currentTurn: ct, aiDifficulty: ad }) => {
       setRoomId(rid);
       setMyTeam(team);
       setBoard(b);
       setCurrentTurn(ct);
+      if (ad) setAiDifficulty(normalizeDifficulty(ad));
       setGameOver(null);
       setSelectedCell(null);
       setValidMoves([]);
@@ -125,6 +148,10 @@ export default function App() {
 
     socket.on('error', (msg) => showToast(msg));
 
+    socket.on('aiDifficultyUpdate', ({ aiDifficulty: ad }) => {
+      if (ad) setAiDifficulty(normalizeDifficulty(ad));
+    });
+
     return () => {
       socket.off('gameStart');
       socket.off('waitingForOpponent');
@@ -135,6 +162,7 @@ export default function App() {
       socket.off('gameRestart');
       socket.off('opponentDisconnected');
       socket.off('error');
+      socket.off('aiDifficultyUpdate');
     };
   }, [myTeam, showToast, playMoveSound]);
 
@@ -180,7 +208,15 @@ export default function App() {
     if (m === 'pvp') {
       setJoinModalOpen(true);
     } else {
-      socket.emit('createRoom', { mode: m });
+      socket.emit('createRoom', { mode: m, aiDifficulty });
+    }
+  }
+
+  function setDifficulty(next) {
+    const d = normalizeDifficulty(next);
+    setAiDifficulty(d);
+    if (mode === 'pva' || mode === 'ava') {
+      socket.emit('setAIDifficulty', { aiDifficulty: d });
     }
   }
 
@@ -289,6 +325,24 @@ export default function App() {
     setDeferredPrompt(null);
   }
 
+  function renderDifficultyControls() {
+    return (
+      <div className="difficulty-group" role="group" aria-label="AI 난이도">
+        <span className="difficulty-label">AI</span>
+        {AI_LEVELS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            className={`difficulty-btn ${aiDifficulty === id ? 'active' : ''}`}
+            onClick={() => setDifficulty(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   const canMove = (mode === 'practice' && currentTurn === myTeam) || (myTeam !== 'spectator' && myTeam === currentTurn && !gameOver);
 
   useEffect(() => {
@@ -296,7 +350,7 @@ export default function App() {
     if (currentTurn === myTeam) return;
 
     const timer = setTimeout(() => {
-      const aiMove = getAIMove(board, currentTurn);
+      const aiMove = getAIMoveByDifficulty(board, currentTurn, aiDifficulty);
       if (!aiMove) return;
       setHistory((prev) => [...prev, { board: board.map((row) => [...row]), turn: currentTurn }]);
       const movedBoard = applyMove(board, aiMove.from, aiMove.to);
@@ -308,7 +362,7 @@ export default function App() {
     }, 650);
 
     return () => clearTimeout(timer);
-  }, [mode, board, currentTurn, myTeam, gameOver, playMoveSound]);
+  }, [mode, board, currentTurn, myTeam, gameOver, playMoveSound, aiDifficulty]);
 
   if (screen === 'home') {
     return (
@@ -340,6 +394,11 @@ export default function App() {
               <h2>연습 모드</h2>
               <p>AI와 대국 + 무제한 되돌리기</p>
             </div>
+          </div>
+
+          <div className="home-difficulty">
+            <p className="home-difficulty-title">AI 난이도 (하 · 중 · 상)</p>
+            {renderDifficultyControls()}
           </div>
         </div>
 
@@ -403,6 +462,7 @@ export default function App() {
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
               {MODE_LABEL[mode] || ''}
             </span>
+            {(mode === 'practice' || mode === 'pva' || mode === 'ava') && renderDifficultyControls()}
             {mode !== 'ava' && myTeam !== 'spectator' && (
               <button className="btn-danger" onClick={handleResign}>항복</button>
             )}
