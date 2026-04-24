@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Board from './Board';
 import { socket } from './socket';
+import { applyMove, createInitialBoard, getValidMoves, isGameOver } from './janggiRules';
 
 const TEAM_LABEL = { cho: '초(楚)', han: '한(漢)' };
-const MODE_LABEL = { pvp: '대인 대국', pva: 'AI 대국', ava: 'AI vs AI' };
+const MODE_LABEL = { pvp: '대인 대국', pva: 'AI 대국', ava: 'AI vs AI', practice: '연습 모드' };
 
 function Toast({ msg }) {
   if (!msg) return null;
@@ -28,6 +29,7 @@ export default function App() {
   const [joinInput, setJoinInput] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [history, setHistory] = useState([]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -163,6 +165,18 @@ export default function App() {
 
   function startMode(m) {
     setMode(m);
+    if (m === 'practice') {
+      setMyTeam('spectator');
+      setBoard(createInitialBoard());
+      setCurrentTurn('cho');
+      setSelectedCell(null);
+      setValidMoves([]);
+      setGameOver(null);
+      setHistory([]);
+      setRoomId('');
+      setScreen('game');
+      return;
+    }
     if (m === 'pvp') {
       setJoinModalOpen(true);
     } else {
@@ -187,10 +201,37 @@ export default function App() {
   }
 
   function handleMove(from, to) {
+    if (mode === 'practice') {
+      if (!board || gameOver) return;
+      const valids = getValidMoves(board, from[0], from[1]);
+      const ok = valids.some(([r, c]) => r === to[0] && c === to[1]);
+      if (!ok) return;
+
+      setHistory((prev) => [...prev, board.map((row) => [...row])]);
+      const movedBoard = applyMove(board, from, to);
+      playMoveSound();
+      setBoard(movedBoard);
+      setCurrentTurn((prev) => (prev === 'cho' ? 'han' : 'cho'));
+      const winner = isGameOver(movedBoard);
+      if (winner) setGameOver({ winner });
+      setSelectedCell(null);
+      setValidMoves([]);
+      return;
+    }
     socket.emit('move', { from, to });
   }
 
   function handleGetMoves(r, c) {
+    if (mode === 'practice') {
+      if (!board || gameOver) return;
+      const piece = board[r][c];
+      if (!piece || piece.team !== currentTurn) {
+        setValidMoves([]);
+        return;
+      }
+      setValidMoves(getValidMoves(board, r, c));
+      return;
+    }
     socket.emit('getValidMoves', { row: r, col: c });
   }
 
@@ -201,7 +242,27 @@ export default function App() {
   }
 
   function handleRestart() {
+    if (mode === 'practice') {
+      setBoard(createInitialBoard());
+      setCurrentTurn('cho');
+      setGameOver(null);
+      setSelectedCell(null);
+      setValidMoves([]);
+      setHistory([]);
+      return;
+    }
     socket.emit('restart');
+  }
+
+  function handleUndoPractice() {
+    if (mode !== 'practice' || history.length === 0) return;
+    const prevBoard = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setBoard(prevBoard);
+    setCurrentTurn((prev) => (prev === 'cho' ? 'han' : 'cho'));
+    setGameOver(null);
+    setSelectedCell(null);
+    setValidMoves([]);
   }
 
   function goHome() {
@@ -210,6 +271,7 @@ export default function App() {
     setGameOver(null);
     setSelectedCell(null);
     setValidMoves([]);
+    setHistory([]);
   }
 
   async function handleInstallApp() {
@@ -222,7 +284,7 @@ export default function App() {
     setDeferredPrompt(null);
   }
 
-  const canMove = myTeam !== 'spectator' && myTeam === currentTurn && !gameOver;
+  const canMove = mode === 'practice' || (myTeam !== 'spectator' && myTeam === currentTurn && !gameOver);
 
   if (screen === 'home') {
     return (
@@ -248,6 +310,11 @@ export default function App() {
               <span className="icon">⚡</span>
               <h2>AI vs AI</h2>
               <p>AI끼리 대국 관전하기</p>
+            </div>
+            <div className="mode-card" onClick={() => startMode('practice')}>
+              <span className="icon">🧪</span>
+              <h2>연습 모드</h2>
+              <p>양측을 직접 두고 무제한 되돌리기</p>
             </div>
           </div>
         </div>
@@ -315,6 +382,11 @@ export default function App() {
             {mode !== 'ava' && myTeam !== 'spectator' && (
               <button className="btn-danger" onClick={handleResign}>항복</button>
             )}
+            {mode === 'practice' && (
+              <button className="btn-secondary" onClick={handleUndoPractice} disabled={history.length === 0}>
+                되돌리기
+              </button>
+            )}
             {!isInstalled && deferredPrompt && (
               <button className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
             )}
@@ -327,7 +399,7 @@ export default function App() {
             <div className="player-badge han">漢</div>
             <div>
               <div className="player-name">
-                {mode === 'ava' ? 'AI (한)' : mode === 'pva' ? 'AI' : '한(漢)'}
+                {mode === 'practice' ? '한(漢) - 연습' : mode === 'ava' ? 'AI (한)' : mode === 'pva' ? 'AI' : '한(漢)'}
               </div>
               <div className="player-label">한(漢) — 파란색</div>
             </div>
@@ -358,7 +430,7 @@ export default function App() {
             <div className="player-badge cho">楚</div>
             <div>
               <div className="player-name">
-                {mode === 'ava' ? 'AI (초)' : mode === 'pva' ? '나 (초)' : '초(楚)'}
+                {mode === 'practice' ? '초(楚) - 연습' : mode === 'ava' ? 'AI (초)' : mode === 'pva' ? '나 (초)' : '초(楚)'}
               </div>
               <div className="player-label">초(楚) — 빨간색</div>
             </div>
