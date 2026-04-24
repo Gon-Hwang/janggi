@@ -1,0 +1,81 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --card: #0f3460;
+  --accent: #e94560;
+  --cho-color: #e63946;
+  --han-color: #457b9d;
+  --board-bg: #f5deb3;
+  --board-line: #8b6914;
+  --text: #eaeaea;
+  --text-muted: #a0a0b0;
+  --btn-primary: #e94560;
+  --btn-hover: #c73652;
+  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.2s;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--btn-primary);
+  color: white;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-hover);
+}
+
+.btn-secondary {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid #2a4a7f;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #1a3a6f;
+}
+
+.btn-danger {
+  background: #7f1d1d;
+  color: white;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #991b1b;
+}
