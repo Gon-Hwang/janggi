@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Board from './Board';
 import { socket } from './socket';
@@ -12,6 +12,7 @@ function Toast({ msg }) {
 }
 
 export default function App() {
+  const audioCtxRef = useRef(null);
   const [screen, setScreen] = useState('home');
   const [mode, setMode] = useState(null);
   const [roomId, setRoomId] = useState('');
@@ -32,6 +33,38 @@ export default function App() {
     setToast(msg);
     setToastKey(k => k + 1);
     setTimeout(() => setToast(''), 3000);
+  }, []);
+
+  const playMoveSound = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.06);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.085);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } catch {
+      // 브라우저/디바이스 제약으로 재생이 막혀도 게임 진행에는 영향 없음
+    }
   }, []);
 
   useEffect(() => {
@@ -59,6 +92,7 @@ export default function App() {
     });
 
     socket.on('boardUpdate', ({ board: b, currentTurn: ct }) => {
+      playMoveSound();
       setBoard(b);
       setCurrentTurn(ct);
       setSelectedCell(null);
@@ -100,7 +134,7 @@ export default function App() {
       socket.off('opponentDisconnected');
       socket.off('error');
     };
-  }, [myTeam, showToast]);
+  }, [myTeam, showToast, playMoveSound]);
 
   useEffect(() => {
     function handleBeforeInstallPrompt(event) {
