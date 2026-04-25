@@ -15,53 +15,105 @@ const ROWS = 10;
 
 function renderPieceIcon(type, s) {
   const f = 'rgba(255,255,255,0.95)';
+  const d = 'rgba(0,0,0,0.2)';
   switch (type) {
-    case 'king': // 왕관
+
+    case 'king': // 왕관 — 3봉 + 구슬 + 밑단
       return (
         <g fill={f}>
-          <path d={`M${-s*.78},${s*.48} L${-s*.78},${s*.08} L${-s*.42},${s*.08} L${-s*.42},${-s*.38} L0,${-s*.84} L${s*.42},${-s*.38} L${s*.42},${s*.08} L${s*.78},${s*.08} L${s*.78},${s*.48} Z`} />
-          <rect x={-s*.78} y={s*.44} width={s*1.56} height={s*.34} rx={s*.07} />
+          <path d={`M${-s*.82},${s*.52} L${-s*.82},${s*.02} L${-s*.48},${-s*.58} L${-s*.18},${-s*.16} L0,${-s*.88} L${s*.18},${-s*.16} L${s*.48},${-s*.58} L${s*.82},${s*.02} L${s*.82},${s*.52} Z`} />
+          <rect x={-s*.82} y={s*.48} width={s*1.64} height={s*.32} rx={s*.07} />
+          <circle cx={-s*.48} cy={-s*.66} r={s*.12} />
+          <circle cx={0}      cy={-s*.94} r={s*.13} />
+          <circle cx={s*.48}  cy={-s*.66} r={s*.12} />
         </g>
       );
-    case 'guard': // 방패
+
+    case 'guard': // 검 — 칼날+코등이(구슬 클러스터)+그립+폼멜
       return (
-        <path d={`M0,${-s*.9} L${s*.65},${-s*.18} L${s*.5},${s*.72} L0,${s*.9} L${-s*.5},${s*.72} L${-s*.65},${-s*.18} Z`} fill={f} />
+        <g>
+          {/* 폼멜 */}
+          <circle cx={0} cy={s*.74} r={s*.24} fill={f} />
+          <circle cx={0} cy={s*.74} r={s*.14} fill={d} />
+          <circle cx={0} cy={s*.74} r={s*.06} fill={f} />
+          {/* 그립 */}
+          <rect x={-s*.12} y={s*.12} width={s*.24} height={s*.48} rx={s*.06} fill={f} />
+          <rect x={-s*.12} y={s*.22} width={s*.24} height={s*.06} rx={s*.02} fill={d} />
+          <rect x={-s*.12} y={s*.33} width={s*.24} height={s*.06} rx={s*.02} fill={d} />
+          <rect x={-s*.12} y={s*.44} width={s*.24} height={s*.06} rx={s*.02} fill={d} />
+          {/* 코등이 본체 */}
+          <rect x={-s*.62} y={-s*.18} width={s*1.24} height={s*.34} rx={s*.07} fill={f} />
+          {/* 코등이 끝 구슬 클러스터 (좌 3개, 우 3개) */}
+          <circle cx={-s*.64} cy={-s*.15} r={s*.1} fill={f} />
+          <circle cx={-s*.76} cy={-s*.02} r={s*.1} fill={f} />
+          <circle cx={-s*.64} cy={s*.13}  r={s*.1} fill={f} />
+          <circle cx={s*.64}  cy={-s*.15} r={s*.1} fill={f} />
+          <circle cx={s*.76}  cy={-s*.02} r={s*.1} fill={f} />
+          <circle cx={s*.64}  cy={s*.13}  r={s*.1} fill={f} />
+          {/* 칼날 */}
+          <path d={`M0,${-s*.96} L${s*.065},${-s*.6} L${s*.12},${-s*.18} L${-s*.12},${-s*.18} L${-s*.065},${-s*.6} Z`} fill={f} />
+          <line x1={0} y1={-s*.88} x2={0} y2={-s*.26} stroke={d} strokeWidth={s*.04} strokeLinecap="round" />
+        </g>
       );
-    case 'elephant': // 코끼리
+
+    case 'elephant': // 코끼리 정면 — 부채형 귀 + 돔 이마 + 코 + 상아
       return (
         <g fill={f}>
-          <ellipse cx={s*.1} cy={-s*.15} rx={s*.52} ry={s*.48} />
-          <ellipse cx={-s*.42} cy={-s*.52} rx={s*.22} ry={s*.17} />
-          <path d={`M${-s*.55},${-s*.02} Q${-s*.92},${s*.32} ${-s*.62},${s*.78}`} stroke={f} strokeWidth={s*.2} fill="none" strokeLinecap="round"/>
-          <ellipse cx={s*.1} cy={s*.48} rx={s*.42} ry={s*.3} />
+          {/* 왼쪽 귀 (부채형) */}
+          <path d={`M${-s*.2},${-s*.48} L${-s*.55},${-s*.62} L${-s*.82},${-s*.28} L${-s*.88},${s*.12} L${-s*.75},${s*.45} L${-s*.4},${s*.38} L${-s*.22},${s*.18}`} strokeLinejoin="round" />
+          {/* 오른쪽 귀 */}
+          <path d={`M${s*.2},${-s*.48} L${s*.55},${-s*.62} L${s*.82},${-s*.28} L${s*.88},${s*.12} L${s*.75},${s*.45} L${s*.4},${s*.38} L${s*.22},${s*.18}`} strokeLinejoin="round" />
+          {/* 이마/얼굴 */}
+          <ellipse cx={0} cy={-s*.12} rx={s*.38} ry={s*.42} />
+          {/* 코 */}
+          <path d={`M${-s*.13},${s*.28} Q${-s*.18},${s*.62} ${-s*.08},${s*.82} Q0,${s*.9} ${s*.08},${s*.82} Q${s*.18},${s*.62} ${s*.13},${s*.28} Z`} />
+          {/* 왼쪽 상아 */}
+          <path d={`M${-s*.14},${s*.3} Q${-s*.7},${s*.22} ${-s*.65},${s*.72}`} fill="none" stroke={f} strokeWidth={s*.19} strokeLinecap="round" />
+          {/* 오른쪽 상아 */}
+          <path d={`M${s*.14},${s*.3} Q${s*.7},${s*.22} ${s*.65},${s*.72}`} fill="none" stroke={f} strokeWidth={s*.19} strokeLinecap="round" />
         </g>
       );
-    case 'horse': // 말
+
+    case 'horse': // 편자 (말발굽 U자)
+      return (
+        <g>
+          <path
+            d={`M${-s*.42},${-s*.82} L${-s*.42},${s*.1} Q${-s*.42},${s*.78} 0,${s*.78} Q${s*.42},${s*.78} ${s*.42},${s*.1} L${s*.42},${-s*.82}`}
+            fill="none" stroke={f} strokeWidth={s*.28} strokeLinecap="square"
+          />
+          <circle cx={-s*.42} cy={-s*.72} r={s*.07} fill={d} />
+          <circle cx={s*.42}  cy={-s*.72} r={s*.07} fill={d} />
+        </g>
+      );
+
+    case 'chariot': // 바퀴 두 개 + 축
       return (
         <g fill={f}>
-          <ellipse cx={s*.05} cy={-s*.18} rx={s*.38} ry={s*.54} transform={`rotate(-12,${s*.05},${-s*.18})`} />
-          <ellipse cx={s*.08} cy={s*.54} rx={s*.25} ry={s*.3} />
-          <polygon points={`${-s*.28},${-s*.6} ${-s*.48},${-s*.85} ${-s*.26},${-s*.78} ${-s*.14},${-s*.58}`} />
+          {[[-s*.38, s*.12], [s*.38, s*.12]].map(([cx, cy], i) => (
+            <g key={i}>
+              <circle cx={cx} cy={cy} r={s*.42} fill="none" stroke={f} strokeWidth={s*.14} />
+              <circle cx={cx} cy={cy} r={s*.1} />
+              <line x1={cx} y1={cy - s*.32} x2={cx} y2={cy + s*.32} stroke={f} strokeWidth={s*.07} />
+              <line x1={cx - s*.32} y1={cy} x2={cx + s*.32} y2={cy} stroke={f} strokeWidth={s*.07} />
+            </g>
+          ))}
+          <rect x={-s*.38} y={s*.06} width={s*.76} height={s*.11} />
+          <rect x={-s*.55} y={-s*.62} width={s*1.1} height={s*.18} rx={s*.05} />
         </g>
       );
-    case 'chariot': // 성탑
+
+    case 'cannon': // 포신 정면 링 + 포가 (중앙 정렬)
       return (
         <g fill={f}>
-          <rect x={-s*.62} y={s*.08} width={s*1.24} height={s*.72} rx={s*.06} />
-          <rect x={-s*.62} y={-s*.72} width={s*.34} height={s*.84} rx={s*.05} />
-          <rect x={-s*.14} y={-s*.72} width={s*.28} height={s*.54} rx={s*.05} />
-          <rect x={s*.28} y={-s*.72} width={s*.34} height={s*.84} rx={s*.05} />
+          <circle cx={0} cy={-s*.22} r={s*.44} fill="none" stroke={f} strokeWidth={s*.18} />
+          <circle cx={0} cy={-s*.22} r={s*.07} />
+          <rect x={-s*.52} y={s*.28} width={s*1.04} height={s*.28} rx={s*.07} />
+          <rect x={-s*.42} y={s*.18} width={s*.14} height={s*.14} />
+          <rect x={s*.28}  y={s*.18} width={s*.14} height={s*.14} />
+          <rect x={-s*.58} y={s*.52} width={s*1.16} height={s*.2} rx={s*.07} />
         </g>
       );
-    case 'cannon': // 대포
-      return (
-        <g fill={f}>
-          <rect x={-s*.72} y={-s*.2} width={s*1.3} height={s*.38} rx={s*.1} />
-          <rect x={-s*.12} y={-s*.68} width={s*.28} height={s*.5} rx={s*.06} />
-          <circle cx={-s*.36} cy={s*.48} r={s*.25} />
-          <circle cx={s*.33} cy={s*.48} r={s*.25} />
-        </g>
-      );
+
     case 'soldier': // 병사
       return (
         <g fill={f}>
@@ -69,6 +121,7 @@ function renderPieceIcon(type, s) {
           <path d={`M${-s*.52},${s*.72} L${-s*.3},${-s*.08} L${s*.3},${-s*.08} L${s*.52},${s*.72} Z`} />
         </g>
       );
+
     default: return null;
   }
 }
