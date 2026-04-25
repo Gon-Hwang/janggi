@@ -23,6 +23,19 @@ function Toast({ msg }) {
   return <div className="toast">{msg}</div>;
 }
 
+function JanggunAlert({ team }) {
+  const isCho = team === 'cho';
+  return (
+    <div className={`janggun-overlay ${isCho ? 'cho' : 'han'}`}>
+      <div className="janggun-card">
+        <div className="janggun-hanja">將軍</div>
+        <div className="janggun-label">장군!</div>
+        <div className="janggun-sub">{isCho ? '초(楚)' : '한(漢)'} 왕이 위협받고 있습니다</div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const audioCtxRef = useRef(null);
   const [screen, setScreen] = useState('home');
@@ -41,9 +54,17 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [history, setHistory] = useState([]);
+  const [janggunTeam, setJanggunTeam] = useState(null);
+  const [janggunKey, setJanggunKey] = useState(0);
   const [aiDifficulty, setAiDifficulty] = useState(() =>
     normalizeDifficulty(typeof localStorage !== 'undefined' ? localStorage.getItem(AI_STORAGE_KEY) : 'medium')
   );
+
+  const showJanggun = useCallback((team) => {
+    setJanggunTeam(team);
+    setJanggunKey((k) => k + 1);
+    setTimeout(() => setJanggunTeam(null), 2200);
+  }, []);
 
   const showToast = useCallback((msg, durationMs = 3000) => {
     setToast(msg);
@@ -146,7 +167,7 @@ export default function App() {
       setCurrentTurn(ct);
       setSelectedCell(null);
       setValidMoves([]);
-      if (isInCheck(b, ct)) showToast(`장군! (${ct === 'cho' ? '초' : '한'})`);
+      if (isInCheck(b, ct)) showJanggun(ct);
     });
 
     socket.on('validMoves', ({ moves }) => {
@@ -279,7 +300,7 @@ export default function App() {
       setCurrentTurn(nextTurn);
       const winner = isGameOver(movedBoard);
       if (winner) setGameOver({ winner });
-      else if (isInCheck(movedBoard, nextTurn)) showToast(`장군! (${nextTurn === 'cho' ? '초' : '한'})`);
+      else if (isInCheck(movedBoard, nextTurn)) showJanggun(nextTurn);
       setSelectedCell(null);
       setValidMoves([]);
       return;
@@ -385,7 +406,7 @@ export default function App() {
       setCurrentTurn(nextTurn);
       const winner = isGameOver(movedBoard);
       if (winner) setGameOver({ winner });
-      else if (isInCheck(movedBoard, nextTurn)) showToast(`장군! (${nextTurn === 'cho' ? '초' : '한'})`);
+      else if (isInCheck(movedBoard, nextTurn)) showJanggun(nextTurn);
     }, 650);
 
     return () => clearTimeout(timer);
@@ -596,6 +617,7 @@ export default function App() {
         </div>
       )}
 
+      {janggunTeam && <JanggunAlert key={janggunKey} team={janggunTeam} />}
       {toast && <Toast key={toastKey} msg={toast} />}
     </div>
   );

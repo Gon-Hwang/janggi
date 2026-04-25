@@ -511,6 +511,87 @@
   100% { opacity: 0; }
 }
 
+/* 장군 알림 */
+.janggun-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 180;
+  pointer-events: none;
+  animation: jgFade 2.2s ease forwards;
+}
+
+.janggun-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 2rem 3.5rem;
+  border-radius: 24px;
+  background: rgba(10, 14, 30, 0.88);
+  backdrop-filter: blur(8px);
+  animation: jgScale 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.janggun-overlay.cho .janggun-card {
+  border: 2px solid rgba(230, 57, 70, 0.8);
+  box-shadow: 0 0 50px rgba(230, 57, 70, 0.45), 0 0 100px rgba(230, 57, 70, 0.15), inset 0 0 30px rgba(230, 57, 70, 0.05);
+}
+
+.janggun-overlay.han .janggun-card {
+  border: 2px solid rgba(69, 123, 157, 0.8);
+  box-shadow: 0 0 50px rgba(69, 123, 157, 0.45), 0 0 100px rgba(69, 123, 157, 0.15), inset 0 0 30px rgba(69, 123, 157, 0.05);
+}
+
+.janggun-hanja {
+  font-size: clamp(3.5rem, 10vw, 5.5rem);
+  font-weight: 900;
+  font-family: 'Noto Serif KR', 'Noto Serif', serif;
+  letter-spacing: 0.15em;
+  line-height: 1;
+}
+
+.janggun-overlay.cho .janggun-hanja {
+  color: #ff6b7a;
+  text-shadow: 0 0 30px rgba(230, 57, 70, 0.9), 0 0 60px rgba(230, 57, 70, 0.5);
+}
+
+.janggun-overlay.han .janggun-hanja {
+  color: #6db8e8;
+  text-shadow: 0 0 30px rgba(69, 123, 157, 0.9), 0 0 60px rgba(69, 123, 157, 0.5);
+}
+
+.janggun-label {
+  font-size: clamp(1.3rem, 4vw, 1.8rem);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+
+.janggun-sub {
+  font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+@keyframes jgFade {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes jgScale {
+  0%   { transform: scale(0.55); }
+  8%   { transform: scale(1.08); }
+  14%  { transform: scale(0.97); }
+  20%  { transform: scale(1); }
+  72%  { transform: scale(1); }
+  100% { transform: scale(0.92); }
+}
+
 /* 모바일 대응 */
 @media (max-width: 480px) {
   .game {
