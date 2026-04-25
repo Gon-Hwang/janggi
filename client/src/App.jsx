@@ -502,26 +502,32 @@ export default function App() {
     <div className="app">
       <div className="game">
         <div className="game-header">
-          <h1 style={{ whiteSpace: 'nowrap' }}>한국 장기</h1>
-          <div className="header-btns">
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
-              {MODE_LABEL[mode] || ''}
-            </span>
-            {(mode === 'practice' || mode === 'pva' || mode === 'ava') && renderDifficultyControls()}
-            {mode !== 'ava' && myTeam !== 'spectator' && (
-              <button className="btn-danger" onClick={handleResign}>항복</button>
-            )}
-            {mode === 'practice' && (
-              <button className="btn-secondary" onClick={handleUndoPractice} disabled={history.length === 0}>
-                되돌리기
-              </button>
-            )}
-            {!isInstalled && (
-              <button type="button" className="btn-primary" onClick={handleInstallApp}>앱 설치</button>
-            )}
-            <button type="button" className="btn-secondary" onClick={handleCheckUpdate}>업데이트 확인</button>
-            <button className="btn-secondary" onClick={goHome}>나가기</button>
+          <div className="game-header-row1">
+            <div className="game-title-group">
+              <h1>한국 장기</h1>
+              {mode && <span className="mode-badge">{MODE_LABEL[mode]}</span>}
+            </div>
+            <div className="header-utils">
+              {!isInstalled && (
+                <button type="button" className="btn-util" onClick={handleInstallApp}>앱 설치</button>
+              )}
+              <button type="button" className="btn-util" onClick={handleCheckUpdate}>업데이트</button>
+              <button className="btn-util btn-util-exit" onClick={goHome}>나가기</button>
+            </div>
           </div>
+          {(mode === 'practice' || mode === 'pva' || mode === 'ava' || (mode === 'pvp' && myTeam !== 'spectator')) && (
+            <div className="game-header-row2">
+              {(mode === 'practice' || mode === 'pva' || mode === 'ava') && renderDifficultyControls()}
+              {mode !== 'ava' && myTeam !== 'spectator' && (
+                <button className="btn-danger" onClick={handleResign}>항복</button>
+              )}
+              {mode === 'practice' && (
+                <button className="btn-secondary" onClick={handleUndoPractice} disabled={history.length === 0}>
+                  되돌리기
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className={`player-panel ${currentTurn === 'han' && !gameOver ? 'active' : ''}`}>

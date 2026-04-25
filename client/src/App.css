@@ -222,28 +222,99 @@
 
 .game-header {
   width: 100%;
-  max-width: 600px;
+  max-width: 680px;
+  background: var(--surface);
+  border: 1px solid #1e3561;
+  border-radius: 14px;
+  padding: 0.6rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.game-header-row1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-.game-header h1 {
-  font-size: 1.25rem;
-  color: #fff;
+.game-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
-.header-btns {
+.game-header h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.mode-badge {
+  background: rgba(99, 152, 219, 0.15);
+  color: #7ab3e8;
+  font-size: 0.68rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 152, 219, 0.25);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.header-utils {
   display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-util {
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid #263552;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn-util:hover {
+  color: var(--text);
+  border-color: #4a6a9a;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btn-util-exit {
+  color: #c07070;
+  border-color: #3d2222;
+}
+
+.btn-util-exit:hover {
+  color: #e09090;
+  border-color: #6a3030;
+  background: rgba(200, 80, 80, 0.08);
+}
+
+.game-header-row2 {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #1e3561;
 }
 
-.header-btns button {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+.game-header-row2 .btn-danger,
+.game-header-row2 .btn-secondary {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
 }
 
 /* 플레이어 정보 패널 */
