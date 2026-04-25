@@ -395,7 +395,7 @@ export default function App() {
       <div className="app">
         <div className="home">
           <div className="home-title">
-            <h1>한국 장기</h1>
+            <h1 style={{ whiteSpace: 'nowrap' }}>한국 장기</h1>
             <p className="subtitle">온라인 장기 대국 — 어디서든 즐기세요</p>
           </div>
 
@@ -501,7 +501,7 @@ export default function App() {
     <div className="app">
       <div className="game">
         <div className="game-header">
-          <h1>한국 장기</h1>
+          <h1 style={{ whiteSpace: 'nowrap' }}>한국 장기</h1>
           <div className="header-btns">
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
               {MODE_LABEL[mode] || ''}
