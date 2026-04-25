@@ -13,7 +13,67 @@ const PIECE_NAMES = {
 const COLS = 9;
 const ROWS = 10;
 
-export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, validMoves, selectedCell, onSelect, canViewAllPieces }) {
+function renderPieceIcon(type, s) {
+  const f = 'rgba(255,255,255,0.95)';
+  switch (type) {
+    case 'king': // 왕관
+      return (
+        <g fill={f}>
+          <path d={`M${-s*.78},${s*.48} L${-s*.78},${s*.08} L${-s*.42},${s*.08} L${-s*.42},${-s*.38} L0,${-s*.84} L${s*.42},${-s*.38} L${s*.42},${s*.08} L${s*.78},${s*.08} L${s*.78},${s*.48} Z`} />
+          <rect x={-s*.78} y={s*.44} width={s*1.56} height={s*.34} rx={s*.07} />
+        </g>
+      );
+    case 'guard': // 방패
+      return (
+        <path d={`M0,${-s*.9} L${s*.65},${-s*.18} L${s*.5},${s*.72} L0,${s*.9} L${-s*.5},${s*.72} L${-s*.65},${-s*.18} Z`} fill={f} />
+      );
+    case 'elephant': // 코끼리
+      return (
+        <g fill={f}>
+          <ellipse cx={s*.1} cy={-s*.15} rx={s*.52} ry={s*.48} />
+          <ellipse cx={-s*.42} cy={-s*.52} rx={s*.22} ry={s*.17} />
+          <path d={`M${-s*.55},${-s*.02} Q${-s*.92},${s*.32} ${-s*.62},${s*.78}`} stroke={f} strokeWidth={s*.2} fill="none" strokeLinecap="round"/>
+          <ellipse cx={s*.1} cy={s*.48} rx={s*.42} ry={s*.3} />
+        </g>
+      );
+    case 'horse': // 말
+      return (
+        <g fill={f}>
+          <ellipse cx={s*.05} cy={-s*.18} rx={s*.38} ry={s*.54} transform={`rotate(-12,${s*.05},${-s*.18})`} />
+          <ellipse cx={s*.08} cy={s*.54} rx={s*.25} ry={s*.3} />
+          <polygon points={`${-s*.28},${-s*.6} ${-s*.48},${-s*.85} ${-s*.26},${-s*.78} ${-s*.14},${-s*.58}`} />
+        </g>
+      );
+    case 'chariot': // 성탑
+      return (
+        <g fill={f}>
+          <rect x={-s*.62} y={s*.08} width={s*1.24} height={s*.72} rx={s*.06} />
+          <rect x={-s*.62} y={-s*.72} width={s*.34} height={s*.84} rx={s*.05} />
+          <rect x={-s*.14} y={-s*.72} width={s*.28} height={s*.54} rx={s*.05} />
+          <rect x={s*.28} y={-s*.72} width={s*.34} height={s*.84} rx={s*.05} />
+        </g>
+      );
+    case 'cannon': // 대포
+      return (
+        <g fill={f}>
+          <rect x={-s*.72} y={-s*.2} width={s*1.3} height={s*.38} rx={s*.1} />
+          <rect x={-s*.12} y={-s*.68} width={s*.28} height={s*.5} rx={s*.06} />
+          <circle cx={-s*.36} cy={s*.48} r={s*.25} />
+          <circle cx={s*.33} cy={s*.48} r={s*.25} />
+        </g>
+      );
+    case 'soldier': // 병사
+      return (
+        <g fill={f}>
+          <circle cx={0} cy={-s*.46} r={s*.3} />
+          <path d={`M${-s*.52},${s*.72} L${-s*.3},${-s*.08} L${s*.3},${-s*.08} L${s*.52},${s*.72} Z`} />
+        </g>
+      );
+    default: return null;
+  }
+}
+
+export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, validMoves, selectedCell, onSelect, canViewAllPieces, pieceStyle }) {
   const containerRef = useRef(null);
   const prevBoardRef = useRef(board);
   const [cellSize, setCellSize] = useState(52);
@@ -126,17 +186,24 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
           strokeWidth={sel ? 2 : 1.5}
           filter={sel ? 'drop-shadow(0 0 6px rgba(233,69,96,0.8))' : 'drop-shadow(1px 2px 3px rgba(0,0,0,0.4))'}
         />
-        <text
-          x={x} y={y + cellSize * 0.14}
-          textAnchor="middle"
-          fontSize={cellSize * 0.38}
-          fontFamily="'Noto Serif KR', 'Noto Serif', serif"
-          fontWeight="bold"
-          fill="white"
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {name}
-        </text>
+        {pieceStyle === 'icon'
+          ? (
+            <g transform={`translate(${x},${y})`} style={{ pointerEvents: 'none' }}>
+              {renderPieceIcon(piece.type, piece_r * 0.72)}
+            </g>
+          ) : (
+            <text
+              x={x} y={y + cellSize * 0.14}
+              textAnchor="middle"
+              fontSize={cellSize * 0.38}
+              fontFamily="'Noto Serif KR', 'Noto Serif', serif"
+              fontWeight="bold"
+              fill="white"
+              style={{ pointerEvents: 'none', userSelect: 'none' }}
+            >
+              {name}
+            </text>
+          )}
       </g>
     );
   }

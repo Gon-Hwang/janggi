@@ -8,6 +8,7 @@ const TEAM_LABEL = { cho: '초(楚)', han: '한(漢)' };
 const MODE_LABEL = { pvp: '대인 대국', pva: 'AI 대국', ava: 'AI vs AI', practice: '연습 모드' };
 
 const AI_STORAGE_KEY = 'janggi-ai-difficulty';
+const PIECE_STYLE_KEY = 'janggi-piece-style';
 const AI_LEVELS = [
   { id: 'easy', label: '하' },
   { id: 'medium', label: '중' },
@@ -59,6 +60,9 @@ export default function App() {
   const [aiDifficulty, setAiDifficulty] = useState(() =>
     normalizeDifficulty(typeof localStorage !== 'undefined' ? localStorage.getItem(AI_STORAGE_KEY) : 'medium')
   );
+  const [pieceStyle, setPieceStyle] = useState(() => {
+    try { return localStorage.getItem(PIECE_STYLE_KEY) || 'hanja'; } catch { return 'hanja'; }
+  });
 
   const showJanggun = useCallback((team) => {
     setJanggunTeam(team);
@@ -128,12 +132,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(AI_STORAGE_KEY, aiDifficulty);
-    } catch {
-      // ignore
-    }
+    try { localStorage.setItem(AI_STORAGE_KEY, aiDifficulty); } catch {}
   }, [aiDifficulty]);
+
+  useEffect(() => {
+    try { localStorage.setItem(PIECE_STYLE_KEY, pieceStyle); } catch {}
+  }, [pieceStyle]);
 
   useEffect(() => {
     socket.connect();
@@ -454,6 +458,11 @@ export default function App() {
           <div className="home-difficulty">
             <p className="home-difficulty-title">AI 난이도 (하 · 중 · 상)</p>
             {renderDifficultyControls()}
+            <p className="home-difficulty-title" style={{ marginTop: '0.5rem' }}>기물 표시</p>
+            <div className="piece-style-toggle">
+              <button className={`btn-util${pieceStyle === 'hanja' ? ' active' : ''}`} onClick={() => setPieceStyle('hanja')}>한자</button>
+              <button className={`btn-util${pieceStyle === 'icon' ? ' active' : ''}`} onClick={() => setPieceStyle('icon')}>아이콘</button>
+            </div>
           </div>
 
           <div className="home-update-row">
@@ -535,19 +544,21 @@ export default function App() {
               <button className="btn-util btn-util-exit" onClick={goHome}>나가기</button>
             </div>
           </div>
-          {(mode === 'practice' || mode === 'pva' || mode === 'ava' || (mode === 'pvp' && myTeam !== 'spectator')) && (
-            <div className="game-header-row2">
-              {(mode === 'practice' || mode === 'pva' || mode === 'ava') && renderDifficultyControls()}
-              {mode !== 'ava' && myTeam !== 'spectator' && (
-                <button className="btn-danger" onClick={handleResign}>항복</button>
-              )}
-              {mode === 'practice' && (
-                <button className="btn-secondary" onClick={handleUndoPractice} disabled={history.length === 0}>
-                  되돌리기
-                </button>
-              )}
+          <div className="game-header-row2">
+            {(mode === 'practice' || mode === 'pva' || mode === 'ava') && renderDifficultyControls()}
+            {mode !== 'ava' && myTeam !== 'spectator' && (
+              <button className="btn-danger" onClick={handleResign}>항복</button>
+            )}
+            {mode === 'practice' && (
+              <button className="btn-secondary" onClick={handleUndoPractice} disabled={history.length === 0}>
+                되돌리기
+              </button>
+            )}
+            <div className="piece-style-toggle">
+              <button className={`btn-util${pieceStyle === 'hanja' ? ' active' : ''}`} onClick={() => setPieceStyle('hanja')}>한자</button>
+              <button className={`btn-util${pieceStyle === 'icon' ? ' active' : ''}`} onClick={() => setPieceStyle('icon')}>아이콘</button>
             </div>
-          )}
+          </div>
         </div>
 
         <div className={`player-panel ${currentTurn === 'han' && !gameOver ? 'active' : ''}`}>
@@ -575,6 +586,7 @@ export default function App() {
             validMoves={validMoves}
             selectedCell={selectedCell}
             canViewAllPieces={mode === 'practice'}
+            pieceStyle={pieceStyle}
             onSelect={(cell) => {
               setSelectedCell(cell);
               if (!cell) setValidMoves([]);

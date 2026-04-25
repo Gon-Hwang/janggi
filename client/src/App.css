@@ -290,6 +290,18 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.btn-util.active {
+  color: #7ab3e8;
+  border-color: rgba(99, 152, 219, 0.5);
+  background: rgba(99, 152, 219, 0.12);
+}
+
+.piece-style-toggle {
+  display: inline-flex;
+  gap: 0.2rem;
+  margin-left: auto;
+}
+
 .btn-util-exit {
   color: #c07070;
   border-color: #3d2222;
