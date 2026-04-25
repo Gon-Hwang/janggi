@@ -81,16 +81,15 @@ export default function App() {
       const clientCommit = __APP_BUILD_COMMIT__ || '';
       const serverVersion = data.version || __APP_VERSION__ || '';
 
+      const shortCommit = (serverCommit || clientCommit || '').slice(0, 7);
+      const versionLabel = shortCommit ? `커밋 ${shortCommit}` : `v${serverVersion}`;
+
       if (clientCommit && serverCommit && clientCommit !== serverCommit) {
         showToast('새 버전이 있습니다. 새로고침 중...', 2000);
         setTimeout(() => location.reload(), 1500);
         return;
       }
-      if (!clientCommit && !serverCommit) {
-        showToast(`연결됨 · v${serverVersion} (커밋 비교 불가)`, 4000);
-        return;
-      }
-      showToast(`최신 상태입니다 · v${serverVersion}`, 3500);
+      showToast(`최신 상태입니다 · ${versionLabel}`, 3500);
     } catch {
       showToast('업데이트 확인에 실패했습니다.');
     }
