@@ -61,7 +61,8 @@ export default function App() {
       const serverVersion = data.version || __APP_VERSION__ || '';
 
       if (clientCommit && serverCommit && clientCommit !== serverCommit) {
-        showToast('새 버전이 배포되었습니다. 새로고침(F5) 해 주세요.', 5000);
+        showToast('새 버전이 있습니다. 새로고침 중...', 2000);
+        setTimeout(() => location.reload(), 1500);
         return;
       }
       if (!clientCommit && !serverCommit) {
