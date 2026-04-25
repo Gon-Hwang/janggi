@@ -308,6 +308,26 @@ export function isGameOver(board) {
   return null;
 }
 
+export function isInCheck(board, team) {
+  let kingRow = -1, kingCol = -1;
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 9; c++) {
+      const p = board[r][c];
+      if (p && p.type === PIECES.KING && p.team === team) { kingRow = r; kingCol = c; }
+    }
+  }
+  if (kingRow === -1) return false;
+  const enemy = team === TEAMS.CHO ? TEAMS.HAN : TEAMS.CHO;
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 9; c++) {
+      const p = board[r][c];
+      if (!p || p.team !== enemy) continue;
+      if (getValidMoves(board, r, c).some(([mr, mc]) => mr === kingRow && mc === kingCol)) return true;
+    }
+  }
+  return false;
+}
+
 export function getAllMoves(board, team) {
   const moves = [];
   for (let r = 0; r < 10; r++) {

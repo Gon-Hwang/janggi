@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Board from './Board';
 import { socket } from './socket';
-import { applyMove, createInitialBoard, getAIMoveByDifficulty, getValidMoves, isGameOver } from './janggiRules';
+import { applyMove, createInitialBoard, getAIMoveByDifficulty, getValidMoves, isGameOver, isInCheck } from './janggiRules';
 
 const TEAM_LABEL = { cho: '초(楚)', han: '한(漢)' };
 const MODE_LABEL = { pvp: '대인 대국', pva: 'AI 대국', ava: 'AI vs AI', practice: '연습 모드' };
@@ -145,6 +145,7 @@ export default function App() {
       setCurrentTurn(ct);
       setSelectedCell(null);
       setValidMoves([]);
+      if (isInCheck(b, ct)) showToast(`장군! (${ct === 'cho' ? '초' : '한'})`);
     });
 
     socket.on('validMoves', ({ moves }) => {
@@ -263,6 +264,8 @@ export default function App() {
     if (mode === 'practice') {
       if (!board || gameOver) return;
       if (currentTurn !== myTeam) return;
+      const movingPiece = board[from[0]][from[1]];
+      if (!movingPiece || movingPiece.team !== currentTurn) return;
       const valids = getValidMoves(board, from[0], from[1]);
       const ok = valids.some(([r, c]) => r === to[0] && c === to[1]);
       if (!ok) return;
@@ -271,9 +274,11 @@ export default function App() {
       const movedBoard = applyMove(board, from, to);
       playMoveSound();
       setBoard(movedBoard);
-      setCurrentTurn((prev) => (prev === 'cho' ? 'han' : 'cho'));
+      const nextTurn = currentTurn === 'cho' ? 'han' : 'cho';
+      setCurrentTurn(nextTurn);
       const winner = isGameOver(movedBoard);
       if (winner) setGameOver({ winner });
+      else if (isInCheck(movedBoard, nextTurn)) showToast(`장군! (${nextTurn === 'cho' ? '초' : '한'})`);
       setSelectedCell(null);
       setValidMoves([]);
       return;
@@ -284,15 +289,8 @@ export default function App() {
   function handleGetMoves(r, c) {
     if (mode === 'practice') {
       if (!board || gameOver) return;
-      if (currentTurn !== myTeam) {
-        setValidMoves([]);
-        return;
-      }
       const piece = board[r][c];
-      if (!piece || piece.team !== currentTurn) {
-        setValidMoves([]);
-        return;
-      }
+      if (!piece) { setValidMoves([]); return; }
       setValidMoves(getValidMoves(board, r, c));
       return;
     }
@@ -382,9 +380,11 @@ export default function App() {
       const movedBoard = applyMove(board, aiMove.from, aiMove.to);
       playMoveSound();
       setBoard(movedBoard);
-      setCurrentTurn((prev) => (prev === 'cho' ? 'han' : 'cho'));
+      const nextTurn = currentTurn === 'cho' ? 'han' : 'cho';
+      setCurrentTurn(nextTurn);
       const winner = isGameOver(movedBoard);
       if (winner) setGameOver({ winner });
+      else if (isInCheck(movedBoard, nextTurn)) showToast(`장군! (${nextTurn === 'cho' ? '초' : '한'})`);
     }, 650);
 
     return () => clearTimeout(timer);
@@ -547,6 +547,7 @@ export default function App() {
             onGetMoves={handleGetMoves}
             validMoves={validMoves}
             selectedCell={selectedCell}
+            canViewAllPieces={mode === 'practice'}
             onSelect={(cell) => {
               setSelectedCell(cell);
               if (!cell) setValidMoves([]);

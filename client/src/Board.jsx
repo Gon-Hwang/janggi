@@ -13,7 +13,7 @@ const PIECE_NAMES = {
 const COLS = 9;
 const ROWS = 10;
 
-export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, validMoves, selectedCell, onSelect }) {
+export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, validMoves, selectedCell, onSelect, canViewAllPieces }) {
   const containerRef = useRef(null);
   const prevBoardRef = useRef(board);
   const [cellSize, setCellSize] = useState(52);
@@ -154,6 +154,13 @@ export default function Board({ board, currentTurn, myTeam, onMove, onGetMoves, 
     if (selectedCell && validMoves.some(([vr, vc]) => vr === r && vc === c)) {
       onMove(selectedCell, [r, c]);
       onSelect(null);
+      return;
+    }
+
+    // 연습 모드: 모든 기물의 이동 경로 표시
+    if (canViewAllPieces) {
+      if (piece) { onSelect([r, c]); onGetMoves(r, c); }
+      else onSelect(null);
       return;
     }
 
