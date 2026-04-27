@@ -405,8 +405,8 @@ export function getAIMove(board, team, depth = 3) {
 export function getAIMoveByDifficulty(board, team, difficulty) {
   const depthByDifficulty = {
     easy: 2,
-    medium: 4,
-    hard: 5,
+    medium: 3,
+    hard: 4,
   };
   const depth = depthByDifficulty[difficulty] ?? depthByDifficulty.medium;
   return getAIMove(board, team, depth);

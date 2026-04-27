@@ -51,7 +51,7 @@ function createRoom(id, mode, aiDifficulty = 'medium') {
     players: { cho: null, han: null },
     status: 'waiting', // waiting | playing | finished
     winner: null,
-    aiDelay: 1000,
+    aiDelay: 350,
     aiDifficulty: normalizeDifficulty(aiDifficulty),
     disconnectTimers: { cho: null, han: null },
   };

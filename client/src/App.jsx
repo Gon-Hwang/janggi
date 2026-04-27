@@ -39,6 +39,7 @@ function JanggunAlert({ team }) {
 
 export default function App() {
   const audioCtxRef = useRef(null);
+  const lastCheckKeyRef = useRef('');
   const [screen, setScreen] = useState('home');
   const [mode, setMode] = useState(null);
   const [roomId, setRoomId] = useState('');
@@ -219,6 +220,14 @@ export default function App() {
       socket.off('aiDifficultyUpdate');
     };
   }, [myTeam, showToast, playMoveSound]);
+
+  useEffect(() => {
+    if (!board || gameOver) return;
+    const key = `${currentTurn}:${JSON.stringify(board)}`;
+    if (lastCheckKeyRef.current === key) return;
+    lastCheckKeyRef.current = key;
+    if (isInCheck(board, currentTurn)) showJanggun(currentTurn);
+  }, [board, currentTurn, gameOver, showJanggun]);
 
   useEffect(() => {
     function handleBeforeInstallPrompt(event) {
@@ -415,7 +424,7 @@ export default function App() {
       const winner = isGameOver(movedBoard);
       if (winner) setGameOver({ winner });
       else if (isInCheck(movedBoard, nextTurn)) showJanggun(nextTurn);
-    }, 650);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [mode, board, currentTurn, myTeam, gameOver, playMoveSound, aiDifficulty]);
