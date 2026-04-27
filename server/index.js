@@ -53,8 +53,11 @@ function createRoom(id, mode, aiDifficulty = 'medium') {
     winner: null,
     aiDelay: 1000,
     aiDifficulty: normalizeDifficulty(aiDifficulty),
+    disconnectTimers: { cho: null, han: null },
   };
 }
+
+const RECONNECT_GRACE_MS = 30000;
 
 io.on('connection', (socket) => {
   console.log('연결:', socket.id);
@@ -108,18 +111,53 @@ io.on('connection', (socket) => {
   // 방 참가
   socket.on('joinRoom', ({ roomId }) => {
     const room = rooms[roomId];
-    if (!room || room.status !== 'waiting') {
-      socket.emit('error', '방을 찾을 수 없거나 이미 시작된 게임입니다.');
+    if (!room) {
+      socket.emit('error', '방을 찾을 수 없습니다.');
       return;
     }
-    room.players.han = socket.id;
-    room.status = 'playing';
-    socket.join(roomId);
-    socket.data.roomId = roomId;
+
+    if (room.mode !== 'pvp') {
+      socket.emit('error', '대인 대국 방만 참가할 수 있습니다.');
+      return;
+    }
 
     const startData = { roomId, board: room.board, currentTurn: room.currentTurn };
-    io.to(room.players.cho).emit('gameStart', { ...startData, team: 'cho' });
-    io.to(room.players.han).emit('gameStart', { ...startData, team: 'han' });
+
+    if (room.status === 'waiting' && room.players.cho && !room.players.han) {
+      room.players.han = socket.id;
+      room.status = 'playing';
+      socket.join(roomId);
+      socket.data.roomId = roomId;
+      io.to(room.players.cho).emit('gameStart', { ...startData, team: 'cho' });
+      io.to(room.players.han).emit('gameStart', { ...startData, team: 'han' });
+      return;
+    }
+
+    if (room.status === 'playing') {
+      let reconnectTeam = null;
+      if (!room.players.cho) reconnectTeam = 'cho';
+      else if (!room.players.han) reconnectTeam = 'han';
+
+      if (!reconnectTeam) {
+        socket.emit('error', '이미 플레이어가 모두 참가 중인 방입니다.');
+        return;
+      }
+
+      room.players[reconnectTeam] = socket.id;
+      socket.join(roomId);
+      socket.data.roomId = roomId;
+
+      if (room.disconnectTimers[reconnectTeam]) {
+        clearTimeout(room.disconnectTimers[reconnectTeam]);
+        room.disconnectTimers[reconnectTeam] = null;
+      }
+
+      io.to(socket.id).emit('gameStart', { ...startData, team: reconnectTeam });
+      socket.to(roomId).emit('opponentReconnected');
+      return;
+    }
+
+    socket.emit('error', '종료된 게임에는 참가할 수 없습니다.');
   });
 
   // 빠른 대전 (매칭)
@@ -231,9 +269,24 @@ io.on('connection', (socket) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
       const room = rooms[roomId];
-      if (room.status === 'playing' && room.mode !== 'ava') {
-        io.to(roomId).emit('opponentDisconnected');
-        room.status = 'finished';
+      if (room.status === 'playing' && room.mode === 'pvp') {
+        const team = room.players.cho === socket.id ? 'cho' : (room.players.han === socket.id ? 'han' : null);
+        if (!team) return;
+
+        room.players[team] = null;
+        io.to(roomId).emit('opponentDisconnected', { graceMs: RECONNECT_GRACE_MS });
+
+        if (room.disconnectTimers[team]) clearTimeout(room.disconnectTimers[team]);
+        room.disconnectTimers[team] = setTimeout(() => {
+          const latestRoom = rooms[roomId];
+          if (!latestRoom || latestRoom.status !== 'playing') return;
+          if (latestRoom.players[team]) return;
+
+          const winner = team === 'cho' ? 'han' : 'cho';
+          latestRoom.status = 'finished';
+          latestRoom.winner = winner;
+          io.to(roomId).emit('gameOver', { winner, reason: 'disconnect' });
+        }, RECONNECT_GRACE_MS);
       }
     }
   });

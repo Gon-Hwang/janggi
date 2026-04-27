@@ -190,9 +190,13 @@ export default function App() {
       setValidMoves([]);
     });
 
-    socket.on('opponentDisconnected', () => {
-      showToast('상대방이 연결을 끊었습니다.');
-      setGameOver({ winner: myTeam, reason: 'disconnect' });
+    socket.on('opponentDisconnected', ({ graceMs }) => {
+      const graceSec = Math.max(1, Math.floor((graceMs || 30000) / 1000));
+      showToast(`상대방 연결이 끊겼습니다. ${graceSec}초 내 재접속하면 계속 진행됩니다.`, 4500);
+    });
+
+    socket.on('opponentReconnected', () => {
+      showToast('상대방이 재접속했습니다. 대국을 계속 진행합니다.', 3500);
     });
 
     socket.on('error', (msg) => showToast(msg));
@@ -210,6 +214,7 @@ export default function App() {
       socket.off('gameOver');
       socket.off('gameRestart');
       socket.off('opponentDisconnected');
+      socket.off('opponentReconnected');
       socket.off('error');
       socket.off('aiDifficultyUpdate');
     };

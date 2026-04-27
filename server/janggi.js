@@ -101,7 +101,8 @@ function getPalaceDiagonalNeighbors(row, col) {
 }
 
 function getPalaceDiagonalRayMoves(board, row, col, team, canCaptureCannon = true) {
-  const enemy = team === TEAMS.CHO ? TEAMS.HAN : TEAMS.CHO;
+  const piece = board[row][col];
+  const enemy = piece.team === TEAMS.CHO ? TEAMS.HAN : TEAMS.CHO;
   const lines = PALACE_DIAGONAL_LINES[team];
   const result = [];
   const here = keyOf(row, col);
@@ -402,12 +403,12 @@ export function getAIMove(board, team, depth = 3) {
 
 /** @param {'easy' | 'medium' | 'hard'} difficulty */
 export function getAIMoveByDifficulty(board, team, difficulty) {
-  if (difficulty === 'easy') {
-    const moves = getAllMoves(board, team);
-    if (moves.length === 0) return null;
-    return moves[Math.floor(Math.random() * moves.length)];
-  }
-  const depth = difficulty === 'hard' ? 4 : 2;
+  const depthByDifficulty = {
+    easy: 2,
+    medium: 4,
+    hard: 5,
+  };
+  const depth = depthByDifficulty[difficulty] ?? depthByDifficulty.medium;
   return getAIMove(board, team, depth);
 }
 
